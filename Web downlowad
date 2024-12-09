@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Replace this with your instance's public DNS
+SERVER_DNS="ec2-34-222-223-56.us-west-2.compute.amazonaws.com" 
+
+# Create a directory to store the downloaded images
+mkdir -p downloaded_images
+cd downloaded_images
+
+# Download images from image1.jpg to image30.jpg
+for i in {2358..2410}; do
+    wget http://$SERVER_DNS/IMG_$i.HEIC
+    wget http://$SERVER_DNS/IMG_$i - 副本.HEIC 
+done
