@@ -1,0 +1,47 @@
+# terminal commmand
+connect:
+cl: 
+ssh -i "C:\Users\54771\Downloads\xmai_cse222a.pem" ec2-user@ec2-52-42-148-138.us-west-2.compute.amazonaws.com
+
+se: 
+ssh -i "C:\Users\54771\Downloads\xmai_cse222a.pem" ec2-user@ec2-34-222-223-56.us-west-2.compute.amazonaws.com
+
+Transfer logs:
+scp -i C:\Users\54771\Downloads\xmai_cse222a.pem ec2-user@ec2-52-42-148-138.us-west-2.compute.amazonaws.com:/home/ec2-user/tcp_params.log .
+
+Test bulk traffic:
+se:
+1. iperf3 -s
+
+cl:
+1. sudo tc qdisc add dev eth0 root netem delay 20ms loss 0.01%
+2. tc qdisc show dev eth0
+3. sudo sysctl -w net.ipv4.tcp_congestion_control=bbr  # or cubic
+4. iperf3 -c 172.31.13.65 -i 1 -t 60 -C cubic -J > iperf3_cubic.json # or bbr
+   iperf3 -c 172.31.13.65 -i 1 -t 60 -C bbr -J > iperf3_bbr.json
+5. sudo tc qdisc del dev eth0 root (clean up)
+
+fairness:
+se:
+iperf3 -s -p 5201 &
+iperf3 -s -p 5202 &
+
+cl:
+iperf3 -c 172.31.13.65 -t 60 -i 1 -p 5201 -J > iperf3_client1.json &
+iperf3 -c 172.31.13.65 -t 60 -i 1 -p 5202 -J > iperf3_client2.json &
+
+Website:
+se:
+1. sudo systemctl start httpd
+2. sudo systemctl enable httpd
+3. sudo sysctl -w net.ipv4.tcp_congestion_control=bbr  # or cubic
+
+cl:
+1. sudo tc qdisc add dev eth0 root netem delay 20ms loss 0.01%
+2. tc qdisc show dev eth0
+3. sudo sysctl -w net.ipv4.tcp_congestion_control=bbr  # or cubic
+4. mkdir -p ~/downloaded_images
+5. ./monitor_tcp.sh # tcp monitor 
+6. wget -r -np -nH --cut-dirs=1 -P ~/downloaded_images http://ec2-34-222-223-56.us-west-2.compute.amazonaws.com/image_1/
+7. rm -r ~/downloaded_images
+8. sudo tc qdisc del dev eth0 root # clean up
