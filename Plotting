@@ -1,0 +1,314 @@
+# bulk traffic no package loss
+import json
+import re
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def bulk_traffic(file_path):
+    # Load iperf3 JSON_cubic output
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+
+    # Extract intervals
+    intervals = data['intervals']
+
+    times = []
+    bandwidths = []
+    rtts = []
+    cwnds = []
+
+    for i, interval in enumerate(intervals):
+        times.append(i + 1)
+        sum_sent = interval['sum']
+        bandwidth = sum_sent['bits_per_second'] / 1e6  # Convert to Mbps
+        bandwidths.append(bandwidth)
+
+        # RTT from streams and CWND
+        streams = interval['streams']
+        if streams:
+            rtt = streams[0]['rtt'] / 1000  # Convert to ms
+            rtts.append(rtt)
+            cwnd = streams[0]['snd_cwnd'] / 1e6  # Convert to MBytes
+            cwnds.append(cwnd)
+        else:
+            rtts.append(None)
+            cwnds.append(None)
+    df = pd.DataFrame({'Time': times, 'Bandwidth': bandwidths, 'RTT': rtts, 'CWND': cwnds})
+    return df
+
+# Create DataFrame
+
+# fairness
+cubic_client1_df = bulk_traffic('iperf3_cubic_client1.json')
+cubic_client2_df = bulk_traffic('iperf3_cubic_client2.json')
+bbr_client1_df = bulk_traffic('iperf3_bbr_client1.json')
+bbr_client2_df = bulk_traffic('iperf3_bbr_client2.json')
+
+# no loss
+cubic_no_loss_df = bulk_traffic('iperf3_cubic_no_loss.json')
+bbr_no_loss_df = bulk_traffic('iperf3_bbr_no_loss.json')
+
+# 0.005 loss
+cubic_005_loss_df = bulk_traffic('iperf3_cubic_005_loss.json')
+bbr_005_loss_df = bulk_traffic('iperf3_bbr_005_loss.json')
+
+# 0.01 loss
+cubic_01_loss_df = bulk_traffic('iperf3_cubic_01_loss.json')
+bbr_01_loss_df = bulk_traffic('iperf3_bbr_01_loss.json')
+
+# Plot Bandwidth over Time
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_no_loss_df['Time'], cubic_no_loss_df['Bandwidth'], label='cubic_no_loss', marker='o', linestyle='--')
+plt.plot(bbr_no_loss_df['Time'], bbr_no_loss_df['Bandwidth'], label='bbr_no_loss', marker='x', linestyle='--')
+plt.plot(cubic_005_loss_df['Time'], cubic_005_loss_df['Bandwidth'], label='cubic_005_loss', marker='o', linestyle='--')
+plt.plot(bbr_005_loss_df['Time'], bbr_005_loss_df['Bandwidth'], label='bbr_005_loss', marker='x', linestyle='--')
+plt.plot(cubic_01_loss_df['Time'], cubic_01_loss_df['Bandwidth'], label='cubic_01_loss', marker='o', linestyle='--')
+plt.plot(bbr_01_loss_df['Time'], bbr_01_loss_df['Bandwidth'], label='bbr_01_loss', marker='x', linestyle='--')
+
+plt.xlabel('Time (s)')
+plt.ylabel('Bytes')
+plt.title('Throughput over Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Plot RTT over Time
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_no_loss_df['Time'], cubic_no_loss_df['RTT'], label='cubic_no_loss', marker='o', linestyle='--')
+plt.plot(bbr_no_loss_df['Time'], bbr_no_loss_df['RTT'], label='bbr_no_loss', marker='x', linestyle='--')
+plt.plot(cubic_005_loss_df['Time'], cubic_005_loss_df['RTT'], label='cubic_005_loss', marker='o', linestyle='--')
+plt.plot(bbr_005_loss_df['Time'], bbr_005_loss_df['RTT'], label='bbr_005_loss', marker='x', linestyle='--')
+plt.plot(cubic_01_loss_df['Time'], cubic_01_loss_df['RTT'], label='cubic_01_loss', marker='o', linestyle='--')
+plt.plot(bbr_01_loss_df['Time'], bbr_01_loss_df['RTT'], label='bbr_01_loss', marker='x', linestyle='--')
+
+plt.xlabel('Time (s)')
+plt.ylabel('RTT (ms)')
+plt.title('RTT over Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Plot CWND over Time
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_no_loss_df['Time'], cubic_no_loss_df['CWND'], label='cubic_no_loss', marker='o', linestyle='--')
+plt.plot(bbr_no_loss_df['Time'], bbr_no_loss_df['CWND'], label='bbr_no_loss', marker='x', linestyle='--')
+plt.plot(cubic_005_loss_df['Time'], cubic_005_loss_df['CWND'], label='cubic_005_loss', marker='o', linestyle='--')
+plt.plot(bbr_005_loss_df['Time'], bbr_005_loss_df['CWND'], label='bbr_005_loss', marker='x', linestyle='--')
+plt.plot(cubic_01_loss_df['Time'], cubic_01_loss_df['CWND'], label='cubic_01_loss', marker='o', linestyle='--')
+plt.plot(bbr_01_loss_df['Time'], bbr_01_loss_df['CWND'], label='bbr_01_loss', marker='x', linestyle='--')
+
+plt.xlabel('Time (s)')
+plt.ylabel('CWND (MBytes)')
+plt.title('CWND over Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# fairness
+# Plot Bandwidth over Time
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_client1_df['Time'], cubic_client1_df['Bandwidth'], label='cubic_client1', marker='o', linestyle='--')
+plt.plot(cubic_client2_df['Time'], cubic_client2_df['Bandwidth'], label='cubic_client2', marker='x', linestyle='--')
+plt.plot(bbr_client1_df['Time'], bbr_client1_df['Bandwidth'], label='bbr_client1', marker='o', linestyle='--')
+plt.plot(bbr_client2_df['Time'], bbr_client2_df['Bandwidth'], label='bbr_client2', marker='x', linestyle='--')
+
+plt.xlabel('Time (s)')
+plt.ylabel('Bytes')
+plt.title('Throughput over Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Plot CWND over Time
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_client1_df['Time'], cubic_client1_df['CWND'], label='cubic_client1', marker='o', linestyle='--')
+plt.plot(cubic_client2_df['Time'], cubic_client2_df['CWND'], label='cubic_client2', marker='x', linestyle='--')
+plt.plot(bbr_client1_df['Time'], bbr_client1_df['CWND'], label='bbr_client1', marker='o', linestyle='--')
+plt.plot(bbr_client2_df['Time'], bbr_client2_df['CWND'], label='bbr_client2', marker='x', linestyle='--')
+
+plt.xlabel('Time (s)')
+plt.ylabel('CWND (MBytes)')
+plt.title('CWND over Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# website traffic
+def web_thru(file_path):
+    # Initialize lists to store extracted data
+    downloaded_sizes = []
+    speeds = []
+    speed_units = []
+    times_remaining = []
+    percentages = []
+
+    # Open and read the wget_log
+    with open(file_path, 'r') as f:
+        for line in f:
+            # Use a regular expression to match the progress lines
+            # Pattern explanation:
+            # - Downloaded size: (\s*\d+[KMG])
+            # - Progress dots: .*
+            # - Percentage: (\d+%)
+            # - Speed: ([\d\.]+)([KMG])
+            # - Time Remaining: (\d+[a-z])
+
+            match = re.search(r'^\s*(\d+[KMG])\s+.*?(\d+%)\s+([\d\.]+)([KMG])\s+(\d+[a-z])$', line)
+            if match:
+                downloaded_size = match.group(1)
+                percentage = match.group(2)
+                speed_value = float(match.group(3))
+                speed_unit = match.group(4)
+                time_remaining = match.group(5)
+
+                downloaded_sizes.append(downloaded_size)
+                percentages.append(percentage)
+                speeds.append(speed_value)
+                speed_units.append(speed_unit)
+                times_remaining.append(time_remaining)
+
+    # Convert speeds to Mbps
+    speeds_mbps = []
+    for value, unit in zip(speeds, speed_units):
+        if unit == 'K':
+            speed_mbps = value / 1000  # KBps to Mbps
+        elif unit == 'M':
+            speed_mbps = value        # MBps to Mbps
+        elif unit == 'G':
+            speed_mbps = value * 1000  # GBps to Mbps
+        else:
+            speed_mbps = value
+        speeds_mbps.append(speed_mbps)
+
+    # Create a DataFrame
+    df = pd.DataFrame({
+        'Downloaded Size': downloaded_sizes,
+        'Percentage': percentages,
+        'Speed (Mbps)': speeds_mbps,
+        'Time Remaining': times_remaining
+    })
+    
+    # Convert Downloaded Size to bytes for plotting
+    size_in_bytes = []
+    for size in df['Downloaded Size']:
+        match = re.match(r'(\d+)([KMG])', size.strip())
+        if match:
+            num = float(match.group(1))
+            unit = match.group(2)
+            if unit == 'K':
+                bytes_size = num * 1000
+            elif unit == 'M':
+                bytes_size = num * 1000 * 1000
+            elif unit == 'G':
+                bytes_size = num * 1000 * 1000 * 1000
+            else:
+                bytes_size = num
+            size_in_bytes.append(bytes_size)
+        else:
+            size_in_bytes.append(0)
+
+    df['Downloaded Bytes'] = size_in_bytes
+    return df
+
+def web_rtt(file_path):
+    # Load tcp_params.log
+    df = pd.read_csv(file_path, sep=' ', skiprows=1, names=['Timestamp', 'CWND', 'RTT_ms'])
+
+    # Ensure data types are correct
+    df['Timestamp'] = df['Timestamp'].astype(float)
+    df['CWND'] = df['CWND'].astype(float)
+    df['RTT_ms'] = df['RTT_ms'].astype(float)
+
+    # Convert Timestamp to Relative Time (Seconds)
+    df['Time'] = df['Timestamp'] - df['Timestamp'].iloc[0]
+
+    # Convert CWND from Segments to Bytes (Assuming MSS of 1448 Bytes)
+    df['CWND_Bytes'] = df['CWND'] * 1448
+
+    # Convert CWND to Megabytes
+    df['CWND_MBytes'] = df['CWND_Bytes'] / (1000 * 1000)
+    return df
+
+cubic_df_no_loss = web_thru('wget_log_cubic_no_loss.txt')
+bbr_df_no_loss = web_thru('wget_log_bbr_no_loss.txt')
+cubic_df_005_loss = web_thru('wget_log_cubic_005_loss.txt')
+bbr_df_005_loss = web_thru('wget_log_bbr_005_loss.txt')
+cubic_df_01_loss = web_thru('wget_log_cubic_01_loss.txt')
+bbr_df_01_loss = web_thru('wget_log_bbr_01_loss.txt')
+
+# Plotting thruput
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_df_no_loss['Downloaded Bytes'], cubic_df_no_loss['Speed (Mbps)'], label='Cubic_no_loss')
+plt.plot(bbr_df_no_loss['Downloaded Bytes'], bbr_df_no_loss['Speed (Mbps)'], label='Bbr_no_loss')
+plt.xlabel('Downloaded Bytes')
+plt.ylabel('Speed (Mbps)')
+plt.title('Download Speed over Downloaded Bytes')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_df_005_loss['Downloaded Bytes'], cubic_df_005_loss['Speed (Mbps)'], label='Cubic_005_loss')
+plt.plot(bbr_df_005_loss['Downloaded Bytes'], bbr_df_005_loss['Speed (Mbps)'], label='Bbr_005_loss')
+plt.xlabel('Downloaded Bytes')
+plt.ylabel('Speed (Mbps)')
+plt.title('Download Speed over Downloaded Bytes')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_df_01_loss['Downloaded Bytes'], cubic_df_01_loss['Speed (Mbps)'], label='Cubic_01_loss')
+plt.plot(bbr_df_01_loss['Downloaded Bytes'], bbr_df_01_loss['Speed (Mbps)'], label='Bbr_01_loss')
+plt.xlabel('Downloaded Bytes')
+plt.ylabel('Speed (Mbps)')
+plt.title('Download Speed over Downloaded Bytes')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+cubic_df_rtt_no_loss = web_rtt('tcp_params_cubic_no_loss.log')
+bbr_df_rtt_no_loss = web_rtt('tcp_params_bbr_no_loss.log')
+cubic_df_rtt_005_loss = web_rtt('tcp_params_cubic_005_loss.log')
+bbr_df_rtt_005_loss = web_rtt('tcp_params_bbr_005_loss.log')
+cubic_df_rtt_01_loss = web_rtt('tcp_params_cubic_01_loss.log')
+bbr_df_rtt_01_loss = web_rtt('tcp_params_bbr_01_loss.log')
+
+
+# plot congestion window
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_df_rtt['Time'], cubic_df_rtt['CWND_MBytes'], marker='o', label='Cubic_no_loss')
+plt.plot(bbr_df_rtt['Time'], bbr_df_rtt['CWND_MBytes'], marker='x', label='Bbr_no_loss')
+
+plt.plot(cubic_df_rtt_005_loss['Time'], cubic_df_rtt_005_loss['CWND_MBytes'], marker='o', label='Cubic_005_loss')
+plt.plot(bbr_df_rtt_005_loss['Time'], bbr_df_rtt_005_loss['CWND_MBytes'], marker='x', label='Bbr_005_loss')
+
+plt.plot(cubic_df_rtt_01_loss['Time'], cubic_df_rtt_01_loss['CWND_MBytes'], marker='o', label='Cubic_01_loss')
+plt.plot(bbr_df_rtt_01_loss['Time'], bbr_df_rtt_01_loss['CWND_MBytes'], marker='x', label='Bbr_01_loss')
+
+plt.xlabel('Time (s)')
+plt.ylabel('Congestion Window Size (MBytes)')
+plt.title('Congestion Window Size Over Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# plot rtt
+plt.figure(figsize=(10, 6))
+plt.plot(cubic_df_rtt['Time'], cubic_df_rtt['RTT_ms'], marker='o', label='Cubic_no_loss')
+plt.plot(bbr_df_rtt['Time'], bbr_df_rtt['RTT_ms'], marker='x', label='Bbr_no_loss')
+
+plt.plot(cubic_df_rtt_005_loss['Time'], cubic_df_rtt_005_loss['RTT_ms'], marker='o', label='Cubic_005_loss')
+plt.plot(bbr_df_rtt_005_loss['Time'], bbr_df_rtt_005_loss['RTT_ms'], marker='x', label='Bbr_005_loss')
+
+plt.plot(cubic_df_rtt_01_loss['Time'], cubic_df_rtt_01_loss['RTT_ms'], marker='o', label='Cubic_01_loss')
+plt.plot(bbr_df_rtt_01_loss['Time'], bbr_df_rtt_01_loss['RTT_ms'], marker='x', label='Bbr_01_loss')
+
+plt.xlabel('Time (s)')
+plt.ylabel('RTT (ms)')
+plt.title('RTT Over Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+
