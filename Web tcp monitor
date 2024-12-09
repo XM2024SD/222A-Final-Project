@@ -1,0 +1,21 @@
+#!/bin/bash
+
+SERVER_IP=172.31.13.65  # Replace with your server's IP address
+INTERVAL=0.5            # Sampling interval in seconds
+OUTPUT_FILE=tcp_params.log
+
+echo "Timestamp CWND RTT_ms" > $OUTPUT_FILE
+
+while true; do
+    TIMESTAMP=$(date +%s.%N)
+    SS_OUTPUT=$(ss -tin dst $SERVER_IP)
+    CWND=$(echo "$SS_OUTPUT" | grep -oP 'cwnd:\K\d+')
+    RTT_FIELD=$(echo "$SS_OUTPUT" | grep -oP 'rtt:[\d\.]+/[\d\.]+')
+    
+    if [ -n "$CWND" ] && [ -n "$RTT_FIELD" ]; then
+        # Extract the RTT value before the slash
+        RTT=$(echo "$RTT_FIELD" | cut -d':' -f2 | cut -d'/' -f1)
+        echo "$TIMESTAMP $CWND $RTT" >> $OUTPUT_FILE
+    fi
+    sleep $INTERVAL
+done
